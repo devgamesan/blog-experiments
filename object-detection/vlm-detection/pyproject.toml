@@ -1,0 +1,14 @@
+[project]
+name = "vlm-detection-notebook"
+version = "0.1.0"
+description = "OpenAI-compatible VLM object detection notebook environment"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "ipykernel>=6.29",
+    "jupyterlab>=4.3",
+    "matplotlib>=3.9",
+    "openai>=1.0",
+    "pandas>=2.2",
+    "pillow>=10.4",
+    "python-dotenv>=1.0",
+]

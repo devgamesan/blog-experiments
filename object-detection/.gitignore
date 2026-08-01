@@ -1,0 +1,25 @@
+# Grounding DINO models
+GroundingDINO_SwinT_OGC.py
+groundingdino_swint_ogc.pth
+*.pth
+*.pt
+
+# YOLOv4 files downloaded by the notebook
+yolo-detection/models/
+
+# Detection results
+*.jpg
+*.png
+!assets/
+!assets/*.png
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+*.ipynb_checkpoints/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.env
