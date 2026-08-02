@@ -197,10 +197,20 @@ def nms_detections(detections: list[dict], threshold: float = 0.5) -> list[dict]
     return kept
 
 
-def run_grounding_dino(image: Image.Image, labels: list[str], canonical_by_label: dict[str, str], device: str, box_threshold: float, text_threshold: float, labels_per_batch: int) -> tuple[list[dict], list[dict]]:
-    model_id = "IDEA-Research/grounding-dino-base"
-    processor = AutoProcessor.from_pretrained(model_id)
-    model = AutoModelForZeroShotObjectDetection.from_pretrained(model_id).to(device).eval()
+def _grounding_dino_detections(
+    image: Image.Image,
+    labels: list[str],
+    canonical_by_label: dict[str, str],
+    device: str,
+    box_threshold: float,
+    text_threshold: float,
+    labels_per_batch: int,
+    processor,
+    model,
+    source: str,
+    offset: tuple[int, int] = (0, 0),
+) -> tuple[list[dict], list[dict]]:
+    """ロード済みのGrounding DINOで1枚（全体画像またはタイル）を検出する。"""
     detections, batches = [], []
     for batch_index in range(0, len(labels), labels_per_batch):
         batch_labels = labels[batch_index : batch_index + labels_per_batch]
@@ -214,13 +224,86 @@ def run_grounding_dino(image: Image.Image, labels: list[str], canonical_by_label
         text_labels = [str(label).lower() for label in result.get("text_labels", [])]
         for box, score, label in zip(boxes, scores, text_labels):
             label = " ".join(label.split())
-            detections.append({"bbox": [float(value) for value in box], "detector_label": label, "canonical_label": canonical_for_label(label, canonical_by_label), "detector_score": float(score), "sources": ["grounding_dino"]})
+            x_offset, y_offset = offset
+            x1, y1, x2, y2 = box
+            detections.append({
+                "bbox": [float(x1 + x_offset), float(y1 + y_offset), float(x2 + x_offset), float(y2 + y_offset)],
+                "detector_label": label,
+                "canonical_label": canonical_for_label(label, canonical_by_label),
+                "detector_score": float(score),
+                "sources": [source],
+            })
         batches.append({"batch": batch_index // labels_per_batch + 1, "labels": len(batch_labels), "detections": len(boxes), "seconds": round(perf_counter() - started, 2)})
+    return detections, batches
+
+
+def run_grounding_dino(image: Image.Image, labels: list[str], canonical_by_label: dict[str, str], device: str, box_threshold: float, text_threshold: float, labels_per_batch: int) -> tuple[list[dict], list[dict]]:
+    model_id = "IDEA-Research/grounding-dino-base"
+    processor = AutoProcessor.from_pretrained(model_id)
+    model = AutoModelForZeroShotObjectDetection.from_pretrained(model_id).to(device).eval()
+    detections, batches = _grounding_dino_detections(
+        image, labels, canonical_by_label, device, box_threshold, text_threshold, labels_per_batch,
+        processor, model, "grounding_dino",
+    )
     del model, processor
     gc.collect()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
     return nms_detections(detections), batches
+
+
+def tile_regions(image: Image.Image, tile_size: int, overlap_ratio: float) -> list[tuple[int, int, int, int]]:
+    """右端・下端を必ず含む、重なり付きタイルの座標を返す。"""
+    if tile_size <= 0:
+        raise ValueError("tile_size は正の整数にしてください。")
+    if not 0 <= overlap_ratio < 1:
+        raise ValueError("overlap_ratio は0以上1未満にしてください。")
+    if max(image.size) <= tile_size:
+        return [(0, 0, image.width, image.height)]
+    stride = max(1, round(tile_size * (1 - overlap_ratio)))
+
+    def starts(length: int) -> list[int]:
+        final = max(0, length - tile_size)
+        values = list(range(0, final + 1, stride))
+        if not values or values[-1] != final:
+            values.append(final)
+        return values
+
+    return [(x, y, min(x + tile_size, image.width), min(y + tile_size, image.height)) for y in starts(image.height) for x in starts(image.width)]
+
+
+def run_tiled_grounding_dino(
+    image: Image.Image,
+    labels: list[str],
+    canonical_by_label: dict[str, str],
+    device: str,
+    box_threshold: float,
+    text_threshold: float,
+    labels_per_batch: int,
+    tile_size: int,
+    overlap_ratio: float,
+) -> tuple[list[dict], list[dict]]:
+    """高解像度画像を重なり付きタイルで検出し、画像全体の座標へ戻して統合する。"""
+    model_id = "IDEA-Research/grounding-dino-base"
+    processor = AutoProcessor.from_pretrained(model_id)
+    model = AutoModelForZeroShotObjectDetection.from_pretrained(model_id).to(device).eval()
+    detections, metrics = [], []
+    for tile_index, (x1, y1, x2, y2) in enumerate(tile_regions(image, tile_size, overlap_ratio), start=1):
+        tile = image.crop((x1, y1, x2, y2))
+        tile_detections, batches = _grounding_dino_detections(
+            tile, labels, canonical_by_label, device, box_threshold, text_threshold, labels_per_batch,
+            processor, model, "grounding_dino_tile", offset=(x1, y1),
+        )
+        for detection in tile_detections:
+            detection["tile_id"] = f"tile-{tile_index:03d}"
+        detections.extend(tile_detections)
+        metrics.append({"tile_id": f"tile-{tile_index:03d}", "origin": [x1, y1], "size": [x2 - x1, y2 - y1], "detections_before_merge": len(tile_detections), "seconds": round(sum(batch["seconds"] for batch in batches), 2)})
+    del model, processor
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    merged = nms_detections(detections, threshold=0.50)
+    return merged, metrics
 
 
 def _as_mask_array(value: object) -> np.ndarray:
@@ -293,7 +376,7 @@ def mark_ambiguity(candidates: list[dict], detector_threshold: float, mask_thres
             reasons.append("LOW_DETECTOR_SCORE")
         if candidate["mask_quality_score"] < mask_threshold:
             reasons.append("LOW_MASK_QUALITY")
-        if "sam2_auto" in candidate["sources"] and "grounding_dino" not in candidate["sources"]:
+        if "sam2_auto" in candidate["sources"] and not any(source.startswith("grounding_dino") for source in candidate["sources"]):
             reasons.append("UNMATCHED_AUTO_MASK")
         for other in candidates:
             if other is candidate:
