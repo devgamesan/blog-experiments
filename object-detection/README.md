@@ -12,6 +12,7 @@
 | [sahi-rtdetr-counting](sahi-rtdetr-counting/README.md) | SAHI + RT-DETR | 重複タイル推論で小物を検出し、統合後の候補をクラス別に数えます。 | `sahi_rtdetr_counting.ipynb` |
 | [grounding-dino](grounding-dino/README.md) | Grounding DINO | テキストプロンプトで指定した対象を検出します。 | `grounding_dino_detection.ipynb` |
 | [vlm-detection](vlm-detection/README.md) | OpenAI互換VLM | 画像対応のChat Completions APIで主要な物体を検出・可視化します。 | `vlm_object_detection.ipynb` |
+| [gemini-detection](gemini-detection/README.md) | Google Gemini API | セグメンテーション輪郭を可視化し、主要な物体をラベル別に数えます。 | `gemini_detection.ipynb` |
 | [vlm-grounding-dino](vlm-grounding-dino/README.md) | OpenAI互換VLM + Grounding DINO | VLMで抽出した物体名をGrounding DINOの入力にして検出します。 | `vlm_grounding_dino_detection.ipynb` |
 | [vlm-grounding-dino-sam2-counting](vlm-grounding-dino-sam2-counting/README.md) | OpenAI互換VLM + Grounding DINO + SAM2 | カテゴリを自動発見し、マスクと候補検証を使って物体をカテゴリ別に数えます。 | `vlm_grounding_dino_sam2_counting.ipynb` |
 
@@ -30,5 +31,6 @@
 - 高解像度画像の小物・遠景物体を数えたい場合は、SAHI + RT-DETRのタイル推論を使用します。タイル数に応じて処理時間が増え、密着物体の完全な分離は保証されません。
 - 任意の語句で検出対象を指定したい場合は、Grounding DINOを使用します。
 - API経由で画像の内容を柔軟に解析したい場合は、OpenAI互換VLMを使用します。VLMが返す座標やconfidenceは専用検出器の較正済み出力ではありません。
+- Gemini APIで主要物体の輪郭を可視化し、ラベル別に数えたい場合は、Gemini セグメンテーション物体検出・カウントを使用します。生成AIが返すマスクは目視確認してください。
 - 画像ごとに検出候補を自動生成しつつ、専用検出器の位置とスコアを使いたい場合は、OpenAI互換VLMとGrounding DINOの統合サンプルを使用します。
 - カテゴリを指定せず、物体の輪郭、重複、部品・背景・描画物体の可能性まで確認してカテゴリ別に数えたい場合は、VLM + Grounding DINO + SAM2のカウントサンプルを使用します。

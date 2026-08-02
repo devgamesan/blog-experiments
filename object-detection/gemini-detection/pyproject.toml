@@ -1,0 +1,15 @@
+[project]
+name = "gemini-detection-notebook"
+version = "0.1.0"
+description = "Gemini API segmentation object detection and counting notebook environment"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "google-genai>=1.0",
+    "ipykernel>=6.29",
+    "jupyterlab>=4.3",
+    "matplotlib>=3.9",
+    "pandas>=2.2",
+    "pillow>=10.4",
+    "pydantic>=2.9",
+    "python-dotenv>=1.0",
+]
