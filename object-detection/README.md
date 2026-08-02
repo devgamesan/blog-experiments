@@ -8,6 +8,8 @@
 | --- | --- | --- | --- |
 | [yolo-detection](yolo-detection/README.md) | YOLOv4-p6 + OpenCV DNN | 物体のクラスとバウンディングボックスを検出します。 | `yolo_object_detection.ipynb` |
 | [maskrcnn-segmentation](maskrcnn-segmentation/README.md) | Torchvision Mask R-CNN | 物体ごとの領域マスクを含むインスタンスセグメンテーションを行います。 | `maskrcnn_segmentation.ipynb` |
+| [rtdetr-detection](rtdetr-detection/README.md) | RT-DETR | TransformerベースでCOCO 80分類の物体を検出し、クラス別に数えます。 | `rtdetr_object_detection.ipynb` |
+| [sahi-rtdetr-counting](sahi-rtdetr-counting/README.md) | SAHI + RT-DETR | 重複タイル推論で小物を検出し、統合後の候補をクラス別に数えます。 | `sahi_rtdetr_counting.ipynb` |
 | [grounding-dino](grounding-dino/README.md) | Grounding DINO | テキストプロンプトで指定した対象を検出します。 | `grounding_dino_detection.ipynb` |
 | [vlm-detection](vlm-detection/README.md) | OpenAI互換VLM | 画像対応のChat Completions APIで主要な物体を検出・可視化します。 | `vlm_object_detection.ipynb` |
 | [vlm-grounding-dino](vlm-grounding-dino/README.md) | OpenAI互換VLM + Grounding DINO | VLMで抽出した物体名をGrounding DINOの入力にして検出します。 | `vlm_grounding_dino_detection.ipynb` |
@@ -24,6 +26,8 @@
 
 - 定義済みの物体クラスを精度優先で検出したい場合は、YOLOv4-p6 + OpenCV DNNの物体検出を使用します。
 - 物体の輪郭・領域も扱いたい場合は、Torchvision Mask R-CNNのインスタンスセグメンテーションを使用します。
+- COCO 80分類を Transformer ベースの検出器で検出・集計したい場合は、RT-DETRを使用します。
+- 高解像度画像の小物・遠景物体を数えたい場合は、SAHI + RT-DETRのタイル推論を使用します。タイル数に応じて処理時間が増え、密着物体の完全な分離は保証されません。
 - 任意の語句で検出対象を指定したい場合は、Grounding DINOを使用します。
 - API経由で画像の内容を柔軟に解析したい場合は、OpenAI互換VLMを使用します。VLMが返す座標やconfidenceは専用検出器の較正済み出力ではありません。
 - 画像ごとに検出候補を自動生成しつつ、専用検出器の位置とスコアを使いたい場合は、OpenAI互換VLMとGrounding DINOの統合サンプルを使用します。
