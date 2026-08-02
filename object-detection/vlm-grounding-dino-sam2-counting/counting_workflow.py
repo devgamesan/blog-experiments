@@ -479,7 +479,13 @@ def candidate_color(candidate_id: str) -> tuple[int, int, int]:
     return ((value * 53) % 180 + 50, (value * 97) % 180 + 50, (value * 193) % 180 + 50)
 
 
-def show_overlay(image: Image.Image, candidates: list[dict], title: str, show_masks: bool = True) -> None:
+def show_overlay(
+    image: Image.Image,
+    candidates: list[dict],
+    title: str,
+    show_masks: bool = True,
+    figsize: tuple[int, int] = (14, 10),
+) -> None:
     frame = np.asarray(image).copy()
     labels = []
     for candidate in candidates:
@@ -494,7 +500,7 @@ def show_overlay(image: Image.Image, candidates: list[dict], title: str, show_ma
     font = japanese_font(16)
     for label, x, y, color in labels:
         drawer.text((x, y), label, fill=tuple(color), font=font, stroke_width=1, stroke_fill="black")
-    plt.figure(figsize=(14, 10))
+    plt.figure(figsize=figsize)
     plt.imshow(canvas)
     plt.title(title)
     plt.axis("off")
